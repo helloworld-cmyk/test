@@ -1,0 +1,20 @@
+{
+	"users": [
+		{
+			"id": 1,
+			"fullName": "Nguyễn Văn An",
+			"email": "an.nguyen@example.com",
+			"password": "An@123456",
+			"confirmPassword": "An@123456",
+			"acceptedTerms": true
+		},
+		{
+			"id": 2,
+			"fullName": "Trần Thị Bình",
+			"email": "binh.tran@example.com",
+			"password": "Binh@123456",
+			"confirmPassword": "Binh@123456",
+			"acceptedTerms": true
+		}
+	]
+}
