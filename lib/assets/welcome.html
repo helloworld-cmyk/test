@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Welcome</title>
+		<style>
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+				background: #f3f4f6;
+				color: #111827;
+				overscroll-behavior-y: contain;
+			}
+
+			.refresh-indicator {
+				position: fixed;
+				top: 0;
+				left: 50%;
+				transform: translate(-50%, -130%);
+				background: #111827;
+				color: #fff;
+				padding: 8px 12px;
+				border-radius: 999px;
+				font-size: 13px;
+				font-weight: 600;
+				z-index: 20;
+				transition: transform 0.2s ease, background 0.2s ease;
+			}
+
+			.refresh-indicator.show {
+				transform: translate(-50%, 12px);
+			}
+
+			.refresh-indicator.ready {
+				background: #2563eb;
+			}
+
+			.container {
+				max-width: 980px;
+				margin: 0 auto;
+				padding: 24px 16px 40px;
+			}
+
+			.header {
+				background: #ffffff;
+				border-radius: 14px;
+				padding: 20px;
+				box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+				margin-bottom: 18px;
+			}
+
+			.title {
+				margin: 0;
+				font-size: 28px;
+				font-weight: 700;
+			}
+
+			.subtitle {
+				margin: 8px 0 0;
+				color: #4b5563;
+			}
+
+			.toolbar {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 16px;
+			}
+
+			button {
+				border: none;
+				border-radius: 10px;
+				padding: 10px 14px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+
+			.btn-reload {
+				background: #2563eb;
+				color: #fff;
+			}
+
+			.btn-load-more {
+				background: #111827;
+				color: #fff;
+			}
+
+			button:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+			}
+
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+				gap: 14px;
+			}
+
+			.product-card {
+				background: #fff;
+				border-radius: 12px;
+				overflow: hidden;
+				box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+			}
+
+			.product-image {
+				width: 100%;
+				height: 150px;
+				object-fit: cover;
+				display: block;
+			}
+
+			.product-content {
+				padding: 10px 12px 12px;
+			}
+
+			.product-name {
+				margin: 0 0 5px;
+				font-size: 16px;
+			}
+
+			.product-price {
+				margin: 0;
+				color: #2563eb;
+				font-weight: 700;
+			}
+
+			.status {
+				margin-top: 12px;
+				color: #6b7280;
+				font-size: 14px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="refreshIndicator" class="refresh-indicator">Kéo xuống để refresh</div>
+
+		<main class="container">
+			<section class="header">
+				<h1 class="title">Xin chào, <span id="userName">Người dùng</span></h1>
+				<p class="subtitle">Danh sách sản phẩm gợi ý cho bạn</p>
+			</section>
+
+			<section class="toolbar">
+				<button class="btn-reload" id="reloadBtn">Reload</button>
+				<button class="btn-load-more" id="loadMoreBtn">Load more</button>
+			</section>
+
+			<section>
+				<div id="productGrid" class="grid"></div>
+				<p id="status" class="status"></p>
+			</section>
+		</main>
+
+		<script>
+			const allProducts = [
+				{ id: 1, name: 'Tai nghe Bluetooth', price: '590.000đ', image: 'https://picsum.photos/seed/p1/480/320' },
+				{ id: 2, name: 'Bàn phím cơ', price: '1.290.000đ', image: 'https://picsum.photos/seed/p2/480/320' },
+				{ id: 3, name: 'Chuột không dây', price: '420.000đ', image: 'https://picsum.photos/seed/p3/480/320' },
+				{ id: 4, name: 'Màn hình 24 inch', price: '3.450.000đ', image: 'https://picsum.photos/seed/p4/480/320' },
+				{ id: 5, name: 'Webcam HD', price: '790.000đ', image: 'https://picsum.photos/seed/p5/480/320' },
+				{ id: 6, name: 'Giá đỡ laptop', price: '350.000đ', image: 'https://picsum.photos/seed/p6/480/320' },
+				{ id: 7, name: 'Sạc nhanh 65W', price: '490.000đ', image: 'https://picsum.photos/seed/p7/480/320' },
+				{ id: 8, name: 'Loa mini', price: '560.000đ', image: 'https://picsum.photos/seed/p8/480/320' },
+				{ id: 9, name: 'Ổ cứng SSD 1TB', price: '1.890.000đ', image: 'https://picsum.photos/seed/p9/480/320' },
+				{ id: 10, name: 'Đèn bàn LED', price: '310.000đ', image: 'https://picsum.photos/seed/p10/480/320' },
+			];
+
+			const pageSize = 4;
+			let currentPage = 1;
+			let isRefreshing = false;
+			let isPulling = false;
+			let startY = 0;
+			let pullDistance = 0;
+			const refreshThreshold = 80;
+
+			const userNameEl = document.getElementById('userName');
+			const productGridEl = document.getElementById('productGrid');
+			const statusEl = document.getElementById('status');
+			const reloadBtn = document.getElementById('reloadBtn');
+			const loadMoreBtn = document.getElementById('loadMoreBtn');
+			const refreshIndicator = document.getElementById('refreshIndicator');
+
+			function getTotalPages() {
+				return Math.max(1, Math.ceil(allProducts.length / pageSize));
+			}
+
+			function getVisibleCount() {
+				return Math.min(currentPage * pageSize, allProducts.length);
+			}
+
+			function renderProducts() {
+				const visibleCount = getVisibleCount();
+				const visibleProducts = allProducts.slice(0, visibleCount);
+				productGridEl.innerHTML = visibleProducts
+					.map(
+						(item) => `
+							<article class="product-card">
+								<img class="product-image" src="${item.image}" alt="${item.name}" />
+								<div class="product-content">
+									<h3 class="product-name">${item.name}</h3>
+									<p class="product-price">${item.price}</p>
+								</div>
+							</article>
+						`,
+					)
+					.join('');
+
+				const totalPages = getTotalPages();
+				const hasMore = currentPage < totalPages;
+				loadMoreBtn.disabled = !hasMore;
+				statusEl.textContent = `Trang ${Math.min(currentPage, totalPages)}/${totalPages} • Đang hiển thị ${visibleProducts.length}/${allProducts.length} sản phẩm`;
+			}
+
+			function hideRefreshIndicator() {
+				refreshIndicator.classList.remove('show');
+				refreshIndicator.classList.remove('ready');
+			}
+
+			async function withFakeLoading(task, loadingText = 'Đang tải dữ liệu...') {
+				isRefreshing = true;
+				reloadBtn.disabled = true;
+				loadMoreBtn.disabled = true;
+				statusEl.textContent = loadingText;
+
+				await new Promise((resolve) => setTimeout(resolve, 700));
+				task();
+				renderProducts();
+				reloadBtn.disabled = false;
+				isRefreshing = false;
+				hideRefreshIndicator();
+			}
+
+			reloadBtn.addEventListener('click', async () => {
+				await withFakeLoading(() => {
+					allProducts.sort(() => Math.random() - 0.5);
+					currentPage = 1;
+				});
+			});
+
+			loadMoreBtn.addEventListener('click', async () => {
+				if (currentPage >= getTotalPages()) {
+					return;
+				}
+
+				await withFakeLoading(() => {
+					currentPage += 1;
+				});
+			});
+
+			window.addEventListener('touchstart', (event) => {
+				if (window.scrollY > 0 || isRefreshing || event.touches.length !== 1) {
+					return;
+				}
+
+				isPulling = true;
+				startY = event.touches[0].clientY;
+				pullDistance = 0;
+			});
+
+			window.addEventListener(
+				'touchmove',
+				(event) => {
+					if (!isPulling || isRefreshing) {
+						return;
+					}
+
+					pullDistance = event.touches[0].clientY - startY;
+					if (pullDistance <= 0) {
+						return;
+					}
+
+					if (window.scrollY === 0) {
+						event.preventDefault();
+					}
+
+					refreshIndicator.classList.add('show');
+					if (pullDistance >= refreshThreshold) {
+						refreshIndicator.classList.add('ready');
+						refreshIndicator.textContent = 'Thả ra để refresh';
+					} else {
+						refreshIndicator.classList.remove('ready');
+						refreshIndicator.textContent = 'Kéo xuống để refresh';
+					}
+				},
+				{ passive: false },
+			);
+
+			window.addEventListener('touchend', async () => {
+				if (!isPulling || isRefreshing) {
+					return;
+				}
+
+				isPulling = false;
+				if (pullDistance >= refreshThreshold) {
+					refreshIndicator.textContent = 'Đang refresh...';
+					await withFakeLoading(() => {
+						allProducts.sort(() => Math.random() - 0.5);
+						currentPage = 1;
+					}, 'Đang làm mới dữ liệu...');
+				} else {
+					hideRefreshIndicator();
+				}
+			});
+
+			function readUserName() {
+				const params = new URLSearchParams(window.location.search);
+				const name = params.get('name');
+				userNameEl.textContent = name && name.trim() ? name.trim() : 'Người dùng';
+			}
+
+			readUserName();
+			renderProducts();
+		</script>
+	</body>
+</html>
