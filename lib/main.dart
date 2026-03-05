@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'login.dart';
-import 'welcome.dart';
+import 'screens/Login/login.dart';
+import 'screens/Welcome/welcome.dart';
 void main(){
   runApp(const MyApp());
 }
