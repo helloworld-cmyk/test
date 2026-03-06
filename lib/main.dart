@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'login.dart';
-import 'welcome.dart';
+import 'package:get/get.dart';
+import 'screens/login/login.dart';
+import 'screens/welcome/welcome.dart';
+import 'screens/welcome/logic/binding.dart';
+import 'screens/login/logic/binding.dart';
 void main(){
   runApp(const MyApp());
 }
@@ -10,21 +13,29 @@ class MyApp extends StatelessWidget{
 
   @override
   Widget build(BuildContext context){
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/welcome': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-          final fullName = args?['fullName'] as String? ?? 'Người dùng';
-          final email = args?['email'] as String? ?? 'Email không xác định';
-          return WelcomeScreen(fullName: fullName, email: email);
-        },
-      },
+      getPages: [
+        GetPage(
+          name: '/login',
+          binding: LoginBinding(),
+          page: () => const LoginScreen(),
+        ),
+        GetPage(
+          name: '/welcome',
+          binding: ProductBinding(),
+          page: () {
+            final args = Get.arguments as Map<String, dynamic>?;
+            final fullName = args?['fullName'] as String? ?? 'Người dùng';
+            final email = args?['email'] as String? ?? 'Email không xác định';
+            return WelcomeScreen(fullName: fullName, email: email);
+          },
+        ),
+      ],
     );
   }
 
