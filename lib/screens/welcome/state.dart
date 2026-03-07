@@ -1,0 +1,142 @@
+import 'dart:math';
+
+class Product {
+  final int id;
+  final String name;
+  final String price;
+  final String image;
+
+  const Product({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.image,
+  });
+}
+
+const List<Product> allProducts = [
+  Product(
+    id: 1,
+    name: 'Tai nghe Bluetooth',
+    price: '590.000đ',
+    image: 'https://picsum.photos/seed/p1/480/320',
+  ),
+  Product(
+    id: 2,
+    name: 'Bàn phím cơ',
+    price: '1.290.000đ',
+    image: 'https://picsum.photos/seed/p2/480/320',
+  ),
+  Product(
+    id: 3,
+    name: 'Chuột không dây',
+    price: '420.000đ',
+    image: 'https://picsum.photos/seed/p3/480/320',
+  ),
+  Product(
+    id: 4,
+    name: 'Màn hình 24 inch',
+    price: '3.450.000đ',
+    image: 'https://picsum.photos/seed/p4/480/320',
+  ),
+  Product(
+    id: 5,
+    name: 'Webcam HD',
+    price: '790.000đ',
+    image: 'https://picsum.photos/seed/p5/480/320',
+  ),
+  Product(
+    id: 6,
+    name: 'Giá đỡ laptop',
+    price: '350.000đ',
+    image: 'https://picsum.photos/seed/p6/480/320',
+  ),
+  Product(
+    id: 7,
+    name: 'Sạc nhanh 65W',
+    price: '490.000đ',
+    image: 'https://picsum.photos/seed/p7/480/320',
+  ),
+  Product(
+    id: 8,
+    name: 'Loa mini',
+    price: '560.000đ',
+    image: 'https://picsum.photos/seed/p8/480/320',
+  ),
+  Product(
+    id: 9,
+    name: 'Ổ cứng SSD 1TB',
+    price: '1.890.000đ',
+    image: 'https://picsum.photos/seed/p9/480/320',
+  ),
+  Product(
+    id: 10,
+    name: 'Đèn bàn LED',
+    price: '310.000đ',
+    image: 'https://picsum.photos/seed/p10/480/320',
+  ),
+];
+
+const int itemsPerPage = 3;
+
+class AllProductController {
+  final List<Product> _sourceProducts;
+  List<List<Product>> productPages = [];
+  int pageIndex = 0;
+
+  AllProductController({List<Product>? initialProducts})
+    : _sourceProducts = List<Product>.from(initialProducts ?? allProducts) {
+    _rebuildPages();
+  }
+
+  void _rebuildPages() {
+    final pageCount = (_sourceProducts.length / itemsPerPage).ceil();
+    productPages = List<List<Product>>.generate(pageCount, (index) {
+      final start = index * itemsPerPage;
+      final end = min(start + itemsPerPage, _sourceProducts.length);
+      return _sourceProducts.sublist(start, end);
+    });
+
+    if (productPages.isEmpty) {
+      pageIndex = 0;
+      return;
+    }
+
+    if (pageIndex >= productPages.length) {
+      pageIndex = productPages.length - 1;
+    }
+  }
+
+  Future<void> refreshProducts() async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    _sourceProducts.shuffle();
+    _rebuildPages();
+    pageIndex = 0;
+  }
+
+  void setPage(int index) {
+    pageIndex = index;
+  }
+
+  void incrementPage() {
+    if (pageIndex < pageCount - 1) {
+      pageIndex++;
+    }
+  }
+
+  void decrementPage() {
+    if (pageIndex > 0) {
+      pageIndex--;
+    }
+  }
+
+  int get pageCount => productPages.length;
+
+  List<Product> get currentPageProducts {
+    if (productPages.isEmpty) {
+      return const <Product>[];
+    }
+
+    return productPages[pageIndex];
+  }
+}

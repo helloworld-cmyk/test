@@ -1,85 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-
-class Product {
-  final int id;
-  final String name;
-  final String price;
-  final String image;
-
-  const Product({
-    required this.id,
-    required this.name,
-    required this.price,
-    required this.image,
-  });
-}
-
-const List<Product> allProducts = [
-  Product(
-    id: 1,
-    name: 'Tai nghe Bluetooth',
-    price: '590.000đ',
-    image: 'https://picsum.photos/seed/p1/480/320',
-  ),
-  Product(
-    id: 2,
-    name: 'Bàn phím cơ',
-    price: '1.290.000đ',
-    image: 'https://picsum.photos/seed/p2/480/320',
-  ),
-  Product(
-    id: 3,
-    name: 'Chuột không dây',
-    price: '420.000đ',
-    image: 'https://picsum.photos/seed/p3/480/320',
-  ),
-  Product(
-    id: 4,
-    name: 'Màn hình 24 inch',
-    price: '3.450.000đ',
-    image: 'https://picsum.photos/seed/p4/480/320',
-  ),
-  Product(
-    id: 5,
-    name: 'Webcam HD',
-    price: '790.000đ',
-    image: 'https://picsum.photos/seed/p5/480/320',
-  ),
-  Product(
-    id: 6,
-    name: 'Giá đỡ laptop',
-    price: '350.000đ',
-    image: 'https://picsum.photos/seed/p6/480/320',
-  ),
-  Product(
-    id: 7,
-    name: 'Sạc nhanh 65W',
-    price: '490.000đ',
-    image: 'https://picsum.photos/seed/p7/480/320',
-  ),
-  Product(
-    id: 8,
-    name: 'Loa mini',
-    price: '560.000đ',
-    image: 'https://picsum.photos/seed/p8/480/320',
-  ),
-  Product(
-    id: 9,
-    name: 'Ổ cứng SSD 1TB',
-    price: '1.890.000đ',
-    image: 'https://picsum.photos/seed/p9/480/320',
-  ),
-  Product(
-    id: 10,
-    name: 'Đèn bàn LED',
-    price: '310.000đ',
-    image: 'https://picsum.photos/seed/p10/480/320',
-  ),
-];
-
-const int itemsPerPage = 3;
+import 'state.dart';
 
 class AllProductItem extends StatefulWidget {
   const AllProductItem({super.key});
@@ -89,48 +9,29 @@ class AllProductItem extends StatefulWidget {
 }
 
 class _AllProductItemState extends State<AllProductItem> {
-  late List<Product> _sourceProducts;
-  List<List<Product>> _productPages = [];
-  int _pageIndex = 0;
+  late final AllProductController _controller;
 
   @override
   void initState() {
     super.initState();
-    _sourceProducts = List<Product>.from(allProducts);
-    _rebuildPages();
-  }
-
-  void _rebuildPages() {
-    final pageCount = (_sourceProducts.length / itemsPerPage).ceil();
-    _productPages = List<List<Product>>.generate(pageCount, (index) {
-      final start = index * itemsPerPage;
-      final end = min(start + itemsPerPage, _sourceProducts.length);
-      return _sourceProducts.sublist(start, end);
-    });
-  }
-
-  Future<void> _onRefresh() async {
-    await Future<void>.delayed(const Duration(seconds: 1));
-    setState(() {
-      _sourceProducts.shuffle();
-      _rebuildPages();
-      _pageIndex = 0;
-    });
-  }
-
-  void _onPageChanged(int index) {
-    setState(() {
-      _pageIndex = index;
-    });
+    _controller = AllProductController();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageCount = _productPages.length;
-    final currentPageProducts = _productPages[_pageIndex];
+    final pageCount = _controller.pageCount;
+    final currentPageProducts = _controller.currentPageProducts;
+    final displayedPage = pageCount == 0 ? 0 : _controller.pageIndex + 1;
 
     return RefreshIndicator(
-      onRefresh: _onRefresh,
+      onRefresh: () async {
+        await _controller.refreshProducts();
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {});
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -144,16 +45,12 @@ class _AllProductItemState extends State<AllProductItem> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                onPressed: _pageIndex > 0
-                    ? () => _onPageChanged(_pageIndex - 1)
-                    : null,
+                onPressed: () => setState(_controller.decrementPage),
                 icon: const Icon(Icons.chevron_left),
               ),
-              Text('Page ${_pageIndex + 1}/$pageCount'),
+              Text('Page $displayedPage/$pageCount'),
               IconButton(
-                onPressed: _pageIndex < pageCount - 1
-                    ? () => _onPageChanged(_pageIndex + 1)
-                    : null,
+                onPressed: () => setState(_controller.incrementPage),
                 icon: const Icon(Icons.chevron_right),
               ),
             ],

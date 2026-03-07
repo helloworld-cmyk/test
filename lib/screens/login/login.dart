@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'assets/BE.dart';
+import 'state.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,27 +10,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String _email = '';
-  String _password = '';
-  bool _isShowPassword = false;
-
-  void _onEmailChanged(String value) {
-    setState(() {
-      _email = value;
-    });
-  }
-
-  void _onPasswordChanged(String value) {
-    setState(() {
-      _password = value;
-    });
-  }
-
-  void _toggleShowPassword() {
-    setState(() {
-      _isShowPassword = !_isShowPassword;
-    });
-  }
+  final LoginController _controller = LoginController();
 
   void _login() async {
     final isValid = _formKey.currentState?.validate() ?? false;
@@ -39,10 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      final result = await FakeAuthApi.instance.login(
-        email: _email.trim(),
-        password: _password,
-      );
+      final result = await _controller.login();
 
       if (!mounted) {
         return;
@@ -66,37 +43,10 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Có lỗi khi đăng nhập: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Có lỗi khi đăng nhập: $e')));
     }
-  }
-
-  String? _validateEmail(String? value) {
-    final email = (value ?? '').trim();
-    if (email.isEmpty) {
-      return 'Vui lòng nhập email';
-    }
-
-    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailRegex.hasMatch(email)) {
-      return 'Email không đúng định dạng';
-    }
-
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    final password = (value ?? '').trim();
-    if (password.isEmpty) {
-      return 'Vui lòng nhập mật khẩu';
-    }
-
-    if (password.length < 6) {
-      return 'Mật khẩu phải có ít nhất 6 ký tự';
-    }
-
-    return null;
   }
 
   @override
@@ -145,8 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text('Email'),
                       const SizedBox(height: 8),
                       TextFormField(
-                        onChanged: _onEmailChanged,
-                        validator: _validateEmail,
+                        onChanged: (value) =>
+                            setState(() => _controller.updateEmail(value)),
+                        validator: _controller.validateEmail,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -159,18 +110,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text('Mật khẩu'),
                       const SizedBox(height: 8),
                       TextFormField(
-                        obscureText: !_isShowPassword,
-                        onChanged: _onPasswordChanged,
-                        validator: _validatePassword,
+                        obscureText: !_controller.isShowPassword,
+                        onChanged: (value) =>
+                            setState(() => _controller.updatePassword(value)),
+                        validator: _controller.validatePassword,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           hintText: 'Nhập mật khẩu của bạn',
                           suffixIcon: IconButton(
-                            onPressed: _toggleShowPassword,
+                            onPressed: () =>
+                                setState(_controller.toggleShowPassword),
                             icon: Icon(
-                              _isShowPassword
+                              _controller.isShowPassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
                             ),
