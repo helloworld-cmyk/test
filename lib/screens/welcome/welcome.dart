@@ -1,70 +1,48 @@
+
 import 'package:flutter/material.dart';
-
-import 'product.dart';
 import 'all_product_controller.dart';
+import 'product.dart';
 
-class AllProductItem extends StatefulWidget {
+
+
+
+class AllProductItem extends StatelessWidget {
   const AllProductItem({super.key});
 
   @override
-  State<AllProductItem> createState() => _AllProductItemState();
-}
-
-class _AllProductItemState extends State<AllProductItem> {
-  late final AllProductController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AllProductController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _onRefresh() async {
-    await _controller.refresh();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final controller = AllProductController();
     return ValueListenableBuilder<AllProductState>(
-      valueListenable: _controller.state,
+      valueListenable: controller.state,
       builder: (context, state, _) {
-        final pageCount = state.pageCount;
-        final currentPageProducts = state.currentPageProducts;
-
         return RefreshIndicator(
-          onRefresh: _onRefresh,
+          onRefresh: controller.refresh,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
-              if (currentPageProducts.isEmpty)
+              if (state.productPages.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('Không có sản phẩm')),
+                  child: Center(child: Text('Khong co san pham')),
                 )
               else
-                ...currentPageProducts.map(
+                ...state.productPages[state.pageIndex].map(
                   (product) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: ProductItem(product: product),
                   ),
                 ),
-              if (pageCount > 0)
+              if (state.productPages.isNotEmpty)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      onPressed: _controller.decrementPage,
+                      onPressed: controller.decrementPage,
                       icon: const Icon(Icons.chevron_left),
                     ),
-                    Text('Page ${state.pageIndex + 1}/$pageCount'),
+                    Text('Page ${state.pageIndex + 1}/${state.productPages.length}'),
                     IconButton(
-                      onPressed: _controller.incrementPage,
+                      onPressed: controller.incrementPage,
                       icon: const Icon(Icons.chevron_right),
                     ),
                   ],
@@ -98,7 +76,7 @@ class ProductItem extends StatelessWidget {
                 width: 92,
                 height: 92,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 92,
                   height: 92,
                   color: Colors.grey.shade300,
