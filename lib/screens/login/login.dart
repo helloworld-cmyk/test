@@ -1,172 +1,270 @@
 import 'package:flutter/material.dart';
-
-import 'login_controller.dart';
+import 'package:first_app/assets/BE.dart';
+import 'package:first_app/screens/login/inheritedwidget.dart';
+import 'package:first_app/screens/login/state.dart';
+import 'package:first_app/screens/login/validate.dart';
 
 class LoginScreen extends StatelessWidget {
-  LoginScreen({super.key});
+  const LoginScreen({super.key});
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  // Validation now imported from validate.dart
 
-  Future<void> _login(BuildContext context, LoginController controller) async {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) {
+  void _onEmailChanged(
+    String value,
+    LoginState state,
+    void Function(LoginState) updateState,
+  ) {
+    updateState(
+      state.copyWith(
+        email: value,
+        emailError: state.showValidationErrors ? validateEmail(value) : '',
+        status: LoginStatus.initial,
+        errorMessage: '',
+      ),
+    );
+  }
+
+  void _onPasswordChanged(
+    String value,
+    LoginState state,
+    void Function(LoginState) updateState,
+  ) {
+    updateState(
+      state.copyWith(
+        password: value,
+        passwordError: state.showValidationErrors
+            ? validatePassword(value)
+            : '',
+        status: LoginStatus.initial,
+        errorMessage: '',
+      ),
+    );
+  }
+
+  Future<void> _login(
+    LoginState state,
+    void Function(LoginState) updateState,
+  ) async {
+    final email = state.email.trim();
+    final password = state.password;
+    final emailError = validateEmail(email);
+    final passwordError = validatePassword(password);
+
+    if (emailError.isNotEmpty || passwordError.isNotEmpty) {
+      updateState(
+        state.copyWith(
+          email: email,
+          emailError: emailError,
+          passwordError: passwordError,
+          showValidationErrors: true,
+          status: LoginStatus.initial,
+          errorMessage: '',
+        ),
+      );
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Đang đăng nhập...')),
+    updateState(
+      state.copyWith(
+        email: email,
+        emailError: '',
+        passwordError: '',
+        showValidationErrors: true,
+        status: LoginStatus.loading,
+        errorMessage: '',
+      ),
     );
 
-    try {
-      final result = await controller.login();
+    final result = await FakeAuthApi.instance.login(
+      email: email,
+      password: password,
+    );
 
-      messenger.hideCurrentSnackBar();
+    if (result.success) {
+      final user = result.user ?? const <String, dynamic>{};
+      updateState(
+        state.copyWith(
+          email: email,
+          status: LoginStatus.success,
+          errorMessage: '',
+          fullName: user['fullName'] as String? ?? '',
+          userEmail: user['email'] as String? ?? email,
+        ),
+      );
+      return;
+    }
 
-      if (!context.mounted) return;
+    updateState(
+      state.copyWith(
+        email: email,
+        status: LoginStatus.failure,
+        errorMessage: result.message,
+        fullName: '',
+        userEmail: '',
+      ),
+    );
+  }
 
-      if (result.success) {
+  void _handleStatus(
+    BuildContext context,
+    LoginState state,
+    void Function(LoginState) updateState,
+  ) {
+    if (state.status == LoginStatus.success) {
+      final fullName = state.fullName;
+      final email = state.userEmail;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) {
+          return;
+        }
+        updateState(
+          state.copyWith(status: LoginStatus.initial, errorMessage: ''),
+        );
         Navigator.of(context).pushReplacementNamed(
           '/welcome',
-          arguments: {
-            'fullName': result.user?['fullName'] as String? ?? 'Người dùng',
-            'email': result.user?['email'] as String? ?? 'Email không xác định',
-          },
+          arguments: {'fullName': fullName, 'email': email},
         );
-      } else {
-        messenger.showSnackBar(
-          SnackBar(content: Text(result.message)),
+      });
+      return;
+    }
+
+    if (state.status == LoginStatus.failure && state.errorMessage.isNotEmpty) {
+      final message = state.errorMessage;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) {
+          return;
+        }
+        updateState(
+          state.copyWith(status: LoginStatus.initial, errorMessage: ''),
         );
-      }
-    } catch (e) {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(content: Text('Có lỗi khi đăng nhập: $e')),
-      );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Đăng nhập thất bại: $message')));
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return LoginScope(
-      child: Builder(
-        builder: (context) {
-          final controller = LoginScope.of(context);
-          final state = controller.state;
-          final topPadding = MediaQuery.of(context).padding.top;
-          final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-          return Scaffold(
-            body: Center(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: topPadding,
-                  bottom: bottomPadding,
-                  left: 32,
-                  right: 32,
+    final loginProvider = LoginProvider.of(context);
+    final state = loginProvider.state;
+    final updateState = loginProvider.updateState;
+    final isLoading = state.status == LoginStatus.loading;
+
+    _handleStatus(context, state, updateState);
+
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: topPadding,
+            bottom: bottomPadding,
+            left: 32,
+            right: 32,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
                 ),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.white,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Đăng nhập',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Text('Chào mừng bạn quay trở lại'),
-                      const SizedBox(height: 16),
-                      Form(
-                        key: _formKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Email'),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              onChanged: controller.updateEmail,
-                              validator: controller.validateEmail,
-                              keyboardType: TextInputType.emailAddress,
-                              enabled: !state.isLoading,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                hintText: 'Nhập email của bạn',
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text('Mật khẩu'),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              obscureText: !state.isShowPassword,
-                              onChanged: controller.updatePassword,
-                              validator: controller.validatePassword,
-                              enabled: !state.isLoading,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                hintText: 'Nhập mật khẩu của bạn',
-                                suffixIcon: IconButton(
-                                  onPressed: state.isLoading
-                                      ? null
-                                      : controller.toggleShowPassword,
-                                  icon: Icon(
-                                    state.isShowPassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: state.isLoading
-                                    ? null
-                                    : () => _login(context, controller),
-                                child: state.isLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Text('Đăng nhập'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              ],
             ),
-          );
-        },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Đăng nhập',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Text('Chào mừng bạn quay trở lại'),
+                const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Email'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      onChanged: (value) =>
+                          _onEmailChanged(value, state, updateState),
+                      keyboardType: TextInputType.emailAddress,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        hintText: 'Nhập email của bạn',
+                        errorText: state.emailError.isEmpty
+                            ? null
+                            : state.emailError,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Mật khẩu'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      obscureText: !state.isShowPassword,
+                      onChanged: (value) =>
+                          _onPasswordChanged(value, state, updateState),
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        hintText: 'Nhập mật khẩu của bạn',
+                        errorText: state.passwordError.isEmpty
+                            ? null
+                            : state.passwordError,
+                        suffixIcon: IconButton(
+                          onPressed: () => updateState(
+                            state.copyWith(
+                              isShowPassword: !state.isShowPassword,
+                            ),
+                          ),
+                          icon: Icon(
+                            state.isShowPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => _login(state, updateState),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Đăng nhập'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 }
-

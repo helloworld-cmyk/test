@@ -1,61 +1,55 @@
 import 'package:flutter/material.dart';
-
-import 'product.dart';
-import 'product_scope.dart';
+import 'package:first_app/screens/welcome/inheritedwidget.dart';
+import 'package:first_app/screens/welcome/product.dart';
 
 class AllProductItem extends StatelessWidget {
   const AllProductItem({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ProductScope(
-      child: Builder(
-        builder: (context) {
-          final controller = ProductScope.of(context);
-          final products = controller.currentPageProducts;
-          final pageCount = controller.pageCount;
-          final pageIndex = controller.pageIndex;
+    final productProvider = ProductProvider.of(context);
+    final state = productProvider.state;
+    final pageCount = state.productPages.length;
+    final pageIndex = state.pageIndex;
+    final products = pageCount == 0
+        ? const <Product>[]
+        : state.productPages[pageIndex];
+    final canGoPrevious = pageIndex > 0;
+    final canGoNext = pageIndex < pageCount - 1;
 
-          return RefreshIndicator(
-            onRefresh: controller.refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
+    return RefreshIndicator(
+      onRefresh: productProvider.refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          if (products.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: Text('Không có sản phẩm')),
+            )
+          else
+            ...products.map(
+              (product) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ProductItem(product: product),
+              ),
+            ),
+          if (pageCount > 0)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (products.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: Text('Không có sản phẩm')),
-                  )
-                else
-                  ...products.map(
-                    (product) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ProductItem(product: product),
-                    ),
-                  ),
-                if (pageCount > 0)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: controller.canGoPrevious
-                            ? controller.decrementPage
-                            : null,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Text('Page ${pageIndex + 1}/$pageCount'),
-                      IconButton(
-                        onPressed: controller.canGoNext
-                            ? controller.incrementPage
-                            : null,
-                        icon: const Icon(Icons.chevron_right),
-                      ),
-                    ],
-                  ),
+                IconButton(
+                  onPressed: canGoPrevious ? productProvider.decrement : null,
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Text('Page ${pageIndex + 1}/$pageCount'),
+                IconButton(
+                  onPressed: canGoNext ? productProvider.increment : null,
+                  icon: const Icon(Icons.chevron_right),
+                ),
               ],
             ),
-          );
-        },
+        ],
       ),
     );
   }
@@ -158,4 +152,3 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 }
-
