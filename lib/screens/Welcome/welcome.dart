@@ -24,45 +24,50 @@ class AllProductItem extends StatelessWidget {
             onRefresh: () async {
               context.read<ProductBloc>().add(const RefreshProducts());
             },
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                if (currentPageProducts.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: Text('Không có sản phẩm')),
-                  )
-                else
-                  ...currentPageProducts.map(
-                    (product) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ProductItem(product: product),
-                    ),
-                  ),
-                if (pageCount > 0)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed:() {
-                          context.read<ProductBloc>().add(
-                            const DecrementPage(),
-                          );
-                        },
-                        icon: const Icon(Icons.chevron_left),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    if (currentPageProducts.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: Text('Không có sản phẩm')),
+                      )
+                    else
+                      ...currentPageProducts.map(
+                        (product) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: ProductItem(product: product),
+                        ),
                       ),
-                      Text('Page ${state.pageIndex + 1}/$pageCount'),
-                      IconButton(
-                        onPressed:() {
-                          context.read<ProductBloc>().add(
-                            const IncrementPage(),
-                          );
-                        },
-                        icon: const Icon(Icons.chevron_right),
+                    if (pageCount > 0)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            onPressed:() {
+                              context.read<ProductBloc>().add(
+                                const DecrementPage(),
+                              );
+                            },
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Text('Page ${state.pageIndex + 1}/$pageCount'),
+                          IconButton(
+                            onPressed:() {
+                              context.read<ProductBloc>().add(
+                                const IncrementPage(),
+                              );
+                            },
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           );
         },
