@@ -37,6 +37,8 @@ dependencies:
   flutter_bloc: ^9.1.1
   crop_image: 
     path: packages/crop_image-1.0.17
+  file_picker:
+    path: packages/file_picker-10.3.10
 
 
 dev_dependencies:
