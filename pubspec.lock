@@ -107,9 +107,11 @@ packages:
   file_picker:
     dependency: "direct main"
     description:
-      path: "packages/file_picker-10.3.10"
-      relative: true
-    source: path
+      path: "."
+      ref: HEAD
+      resolved-ref: "3c80780c40ff5c0d8e8145889914d406bbd16ef8"
+      url: "https://github.com/helloworld-cmyk/fake_file_picker.git"
+    source: git
     version: "10.3.10"
   flutter:
     dependency: "direct main"

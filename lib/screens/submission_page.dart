@@ -14,20 +14,42 @@ class SubmissionPage extends StatefulWidget {
 }
 
 class _SubmissionPageState extends State<SubmissionPage> {
-  List<PlatformFile> _selectedFiles = [];
+  final List<PlatformFile> _selectedFiles = [];
   bool _isSubmitting = false;
 
   Future<void> _pickFiles() async {
     final result = await FilePicker.platform.pickFiles(
-      type:FileType.image,
-      allowMultiple: true
+      allowMultiple: true,
+      type: FileType.any,
     );
     if (result == null) {
       return;
     }
 
+    _mergeSelectedFiles(result.files);
+  }
+
+
+
+  void _mergeSelectedFiles(List<PlatformFile> files) {
+    final existingKeys = _selectedFiles
+        .map((file) => file.path ?? file.name)
+        .toSet();
+
     setState(() {
-      _selectedFiles = result.files;
+      for (final file in files) {
+        final key = file.path ?? file.name;
+        if (!existingKeys.contains(key)) {
+          _selectedFiles.add(file);
+          existingKeys.add(key);
+        }
+      }
+    });
+  }
+
+  void _removeSelectedFile(int index) {
+    setState(() {
+      _selectedFiles.removeAt(index);
     });
   }
 
@@ -166,6 +188,7 @@ class _SubmissionPageState extends State<SubmissionPage> {
             icon: const Icon(Icons.upload_file),
             label: const Text('Chọn nhiều file'),
           ),
+          const SizedBox(height: 8),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _selectedFiles.isEmpty || _isSubmitting ? null : _submit,
@@ -192,53 +215,52 @@ class _SubmissionPageState extends State<SubmissionPage> {
   Widget _buildFileList(BuildContext context, Assignment assignment) {
     final hasPicked = _selectedFiles.isNotEmpty;
     final existingFiles = assignment.submittedFileNames;
-    final items = <_FileDisplayItem>[];
 
     if (hasPicked) {
-      for (final file in _selectedFiles) {
-        items.add(
-          _FileDisplayItem(
-            name: file.name,
-            sizeLabel: formatBytes(file.size),
-          ),
-        );
-      }
-    } else {
-      for (final name in existingFiles) {
-        items.add(_FileDisplayItem(name: name));
-      }
-    }
-
-    if (items.isEmpty) {
-      return _buildFileRow(
-        context,
-        name: 'Chưa chọn tệp',
-        sizeLabel: null,
+      return Column(
+        children: List.generate(_selectedFiles.length, (index) {
+          final file = _selectedFiles[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: index == _selectedFiles.length - 1 ? 0 : 8),
+            child: _buildFileRow(
+              context,
+              name: file.name,
+              sizeLabel: formatBytes(file.size),
+              onRemove: () => _removeSelectedFile(index),
+            ),
+          );
+        }),
       );
     }
 
-    final rows = <Widget>[];
-    for (var i = 0; i < items.length; i++) {
-      final item = items[i];
-      rows.add(
-        _buildFileRow(
-          context,
-          name: item.name,
-          sizeLabel: item.sizeLabel,
-        ),
+    if (existingFiles.isNotEmpty) {
+      return Column(
+        children: List.generate(existingFiles.length, (index) {
+          final name = existingFiles[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: index == existingFiles.length - 1 ? 0 : 8),
+            child: _buildFileRow(
+              context,
+              name: name,
+              sizeLabel: null,
+            ),
+          );
+        }),
       );
-      if (i != items.length - 1) {
-        rows.add(const SizedBox(height: 8));
-      }
     }
 
-    return Column(children: rows);
+    return _buildFileRow(
+      context,
+      name: 'Chưa chọn tệp',
+      sizeLabel: null,
+    );
   }
 
   Widget _buildFileRow(
     BuildContext context, {
     required String name,
     required String? sizeLabel,
+    VoidCallback? onRemove,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
@@ -265,15 +287,16 @@ class _SubmissionPageState extends State<SubmissionPage> {
                     color: colorScheme.onSurfaceVariant,
                   ),
             ),
+          if (onRemove != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(Icons.close),
+              tooltip: 'Xóa tệp',
+            ),
+          ],
         ],
       ),
     );
   }
-}
-
-class _FileDisplayItem {
-  const _FileDisplayItem({required this.name, this.sizeLabel});
-
-  final String name;
-  final String? sizeLabel;
 }

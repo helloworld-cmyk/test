@@ -38,7 +38,8 @@ dependencies:
   crop_image: 
     path: packages/crop_image-1.0.17
   file_picker:
-    path: packages/file_picker-10.3.10
+    git:
+      url: https://github.com/helloworld-cmyk/fake_file_picker.git
 
 
 dev_dependencies:
